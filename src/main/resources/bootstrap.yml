@@ -1,0 +1,8 @@
+spring:
+  application:
+    name: 
+      payment-service
+  cloud:
+    config:
+      uri:      - http://${config-host:3.87.29.41}:8888
+  
