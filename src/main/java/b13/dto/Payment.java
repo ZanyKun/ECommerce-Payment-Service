@@ -1,11 +1,10 @@
 package b13.dto;
 
-import java.util.Date;
+import java.io.Serializable;
 
 import javax.persistence.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
-import javax.persistence.Id;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -15,19 +14,17 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class Payment {
+public class Payment implements Serializable{
 	
-	@Id
-	@GeneratedValue(strategy = GenerationType.AUTO)
-	long paymentId;
+	private static final long serialVersionUID = 1L;
+	
+	@JsonProperty("orderId")
 	long orderId;
-	String username;
+	@JsonProperty("cardNumber")
 	long cardNumber;
+	@JsonProperty("ccv")
+	int ccv;
+	@JsonProperty("orderTotal")
 	double orderTotal;
-	Date orderDate;
-	PaymentStatus paymentStatus;
 	
-	public enum PaymentStatus{
-		PAYMENT_PROCESSING, PAYMENT_CONFIRMED, PAYMENT_REFUNDED, PAYMENT_CANCELLED;
-	}
 }
