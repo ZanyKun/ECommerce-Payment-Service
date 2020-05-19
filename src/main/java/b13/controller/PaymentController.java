@@ -22,7 +22,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.paypal.api.payments.Amount;
-import com.paypal.api.payments.Details;
 import com.paypal.api.payments.Links;
 import com.paypal.api.payments.Order;
 import com.paypal.api.payments.Payer;
@@ -33,7 +32,6 @@ import com.paypal.base.rest.APIContext;
 import com.paypal.base.rest.PayPalRESTException;
 
 import b13.dto.OrderSummary;
-import b13.service.PayPalClient;
 import lombok.AllArgsConstructor;
 
 @RequestMapping("/payments")
@@ -41,8 +39,10 @@ import lombok.AllArgsConstructor;
 @AllArgsConstructor
 public class PaymentController {
 	
-	PayPalClient payPalClient;
-		
+	String clientId = "AXqwt5xKBqFi_Ojw0UedKDIsjI0q5NBMj3z52vHPEwf-CLv1p-flc4LFDd9kcaEYcRcPGqcq2nnSB9NE";
+	String secretKey = "EEz1TTKJdGj5NnOIdeGwxr2DXAuS3Yr7bvL109H9dwx1rSHBybEp6hsOWdSLf4httZ3VlwCQYzc7yz7W";
+	
+	
 //	@PutMapping(value = "/{paymentId}")
 //	public ResponseEntity<?> updateUser(HttpServletRequest request, @PathVariable long paymentId, @RequestBody Payment payment){
 //		payment.setPaymentId(paymentId);
@@ -53,16 +53,52 @@ public class PaymentController {
 	
 	@RabbitListener(queues = {"payment-receiver"})
 	public ResponseEntity<?> createPayment(OrderSummary order){
-		String status = payPalClient.createPayment(order);
 		
-		return null;
-	}
-	
-	@GetMapping("/complete_payment")
-	public ResponseEntity<?> completePayment(){
-		String status = payPalClient.completePayment();
+		Amount amount = new Amount();
+		amount.setCurrency("USD");
+		amount.setTotal(order.getGrandtotal().toString());
 		
-		return null;
+		Transaction transaction = new Transaction();
+		transaction.setAmount(amount);
+		List<Transaction> transactions = new ArrayList<>();
+		transactions.add(transaction);
+		
+		Payer payer = new Payer();
+		payer.setPaymentMethod("paypal");
+		
+		Payment payment = new Payment();
+		payment.setIntent("authorize");
+		payment.setPayer(payer);
+		payment.setTransactions(transactions);
+		RedirectUrls redirectUrls = new RedirectUrls();
+		redirectUrls.setCancelUrl("redirect:/orders/" + order.getOrderid());
+//		redirectUrls.setReturnUrl("redirect");
+		payment.setRedirectUrls(redirectUrls);
+		Payment createdPayment;
+		String approvalurl = "";
+		try {
+			APIContext context = new APIContext(clientId, secretKey, "sandbox");
+			createdPayment = payment.create(context);
+			if(createdPayment != null) {
+				List<Links> links = createdPayment.getLinks();
+				for (Links link: links) {
+					if(link.getRel().equals("approval_url")) {
+						approvalurl = link.getHref();
+						break;
+					}
+				}
+			}
+			
+		}
+		catch(PayPalRESTException e) {
+			
+		}
+		
+		
+		if(orderAmount > totalAmount) {
+			throw new AmqpRejectAndDontRequeueException("User amount does not cover order amount");
+		}
 	}
+	//TODO taking online card details, retrying 
 	
 }
